@@ -2,52 +2,52 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Durger King</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        .product-card { background: #1f2937; border-radius: 1rem; padding: 10px; text-align: center; }
-        .add-btn { background: #f59e0b; width: 100%; padding: 8px; border-radius: 0.5rem; font-weight: bold; }
-        .counter-btn { background: #374151; padding: 5px 15px; border-radius: 0.5rem; font-weight: bold; }
-    </style>
 </head>
-<body class="bg-gray-950 text-white p-4">
+<body class="bg-[#18222d] text-white p-4">
+
     <h1 class="text-2xl font-bold text-center mb-6">Durger King</h1>
 
     <div id="menu" class="grid grid-cols-2 gap-4 mb-24"></div>
 
-    <button id="view-order" onclick="showOrder()" 
-            class="fixed bottom-4 left-4 right-4 bg-green-600 py-4 rounded-xl font-bold text-lg hidden shadow-2xl">
+    <button id="view-order" onclick="tg.sendData(JSON.stringify(cart)); tg.close();" 
+            class="fixed bottom-4 left-4 right-4 bg-[#31b131] py-4 rounded-xl font-bold text-lg hidden shadow-xl">
         VIEW ORDER
     </button>
 
     <script>
-        const menuItems = [
-            {name: "Cake", price: 1.00, emoji: "🍰"}, {name: "Burger", price: 4.99, emoji: "🍔"},
-            {name: "Fries", price: 1.49, emoji: "🍟"}, {name: "Hotdog", price: 3.49, emoji: "🌭"},
-            {name: "Taco", price: 3.99, emoji: "🌮"}, {name: "Pizza", price: 7.99, emoji: "🍕"},
-            {name: "Donut", price: 1.49, emoji: "🍩"}, {name: "Popcorn", price: 1.99, emoji: "🍿"},
-            {name: "Coke", price: 1.49, emoji: "🥤"}, {name: "Icecream", price: 5.99, emoji: "🍦"},
-            {name: "Cookie", price: 3.99, emoji: "🍪"}, {name: "Flan", price: 7.99, emoji: "🍮"}
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        const items = [
+            {id: 1, name: "Cake", price: 1.00}, {id: 2, name: "Burger", price: 4.99},
+            {id: 3, name: "Fries", price: 1.49}, {id: 4, name: "Hotdog", price: 3.49},
+            {id: 5, name: "Taco", price: 3.99}, {id: 6, name: "Pizza", price: 7.99},
+            {id: 7, name: "Donut", price: 1.49}, {id: 8, name: "Popcorn", price: 1.99},
+            {id: 9, name: "Coke", price: 1.49}, {id: 10, name: "Icecream", price: 5.99},
+            {id: 11, name: "Cookie", price: 3.99}, {id: 12, name: "Flan", price: 7.99}
         ];
 
         let cart = {};
-        let tg = window.Telegram.WebApp;
-        tg.expand();
 
-        function renderMenu() {
-            const menuDiv = document.getElementById('menu');
-            menuDiv.innerHTML = menuItems.map(item => `
-                <div class="product-card">
-                    <div class="text-4xl mb-2">${item.emoji}</div>
+        function render() {
+            const menu = document.getElementById('menu');
+            menu.innerHTML = items.map(item => `
+                <div class="bg-[#24303d] p-3 rounded-2xl text-center">
+                    <img src="images/${item.id}.png" class="w-20 h-20 mx-auto mb-2">
                     <h3 class="font-bold text-sm">${item.name}</h3>
-                    <p class="text-orange-400 text-xs mb-2">$${item.price}</p>
-                    <div id="btn-${item.name}">
-                        ${!cart[item.name] ? 
-                            `<button onclick="add('${item.name}', ${item.price})" class="add-btn">ADD</button>` :
-                            `<div class="flex justify-between items-center bg-gray-700 rounded-lg p-1">
-                                <button onclick="update('${item.name}', -1)" class="px-3">-</button>
-                                <span>${cart[item.name].count}</span>
-                                <button onclick="update('${item.name}', 1)" class="px-3">+</button>
+                    <p class="text-orange-400 text-xs mb-3">$${item.price.toFixed(2)}</p>
+                    
+                    <div id="ctrl-${item.id}">
+                        ${!cart[item.id] ? 
+                            `<button onclick="update(${item.id}, 1)" class="w-full bg-orange-500 py-2 rounded-xl font-bold">ADD</button>` :
+                            `<div class="flex justify-between items-center bg-[#1e2936] rounded-xl">
+                                <button onclick="update(${item.id}, -1)" class="px-4 py-2 text-xl">-</button>
+                                <span class="font-bold">${cart[item.id].count}</span>
+                                <button onclick="update(${item.id}, 1)" class="px-4 py-2 text-xl">+</button>
                             </div>`
                         }
                     </div>
@@ -60,7 +60,14 @@
             btn.innerText = `VIEW ORDER (${total})`;
         }
 
-        // ... add, update, showOrder funksiyalari avvalgidek ...
+        function update(id, delta) {
+            if (!cart[id]) cart[id] = { ...items.find(i => i.id === id), count: 0 };
+            cart[id].count += delta;
+            if (cart[id].count <= 0) delete cart[id];
+            render();
+        }
+
+        render();
     </script>
 </body>
 </html>
