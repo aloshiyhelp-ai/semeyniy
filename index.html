@@ -2,85 +2,93 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Durger King</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body class="bg-gray-900 text-white p-4">
-
-    <div class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold text-center mb-6">Durger King</h1>
-        
-        <div id="menu" class="grid grid-cols-1 gap-4 mb-20">
-            <div class="bg-gray-800 p-3 rounded-xl flex items-center justify-between">
-                <div>
-                    <h3 class="font-bold">Burger</h3>
-                    <p class="text-orange-400">$4.99</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="changeCount('Burger', 4.99, -1)" class="bg-red-500 px-3 py-1 rounded-lg">-</button>
-                    <span id="count-Burger" class="font-bold">0</span>
-                    <button onclick="changeCount('Burger', 4.99, 1)" class="bg-orange-500 px-3 py-1 rounded-lg">+</button>
-                </div>
-            </div>
-            
-            <div class="bg-gray-800 p-3 rounded-xl flex items-center justify-between">
-                <div>
-                    <h3 class="font-bold">Fries</h3>
-                    <p class="text-orange-400">$1.49</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="changeCount('Fries', 1.49, -1)" class="bg-red-500 px-3 py-1 rounded-lg">-</button>
-                    <span id="count-Fries" class="font-bold">0</span>
-                    <button onclick="changeCount('Fries', 1.49, 1)" class="bg-orange-500 px-3 py-1 rounded-lg">+</button>
-                </div>
-            </div>
-        </div>
-
-        <button id="view-order" onclick="checkout()" 
-                class="fixed bottom-4 left-4 right-4 bg-green-600 py-4 rounded-xl font-bold text-lg shadow-xl hidden">
+    <div class="max-w-md mx-auto" id="menu-container">
+        <h1 class="text-2xl font-bold text-center mb-6 text-orange-500">Durger King Menu</h1>
+        <div id="menu" class="space-y-4 mb-24"></div>
+        <button id="view-order" onclick="showOrder()" 
+                class="fixed bottom-4 left-4 right-4 bg-green-600 py-4 rounded-xl font-bold text-lg hidden">
             VIEW ORDER
         </button>
     </div>
 
+    <div id="order-screen" class="hidden p-4">
+        <h2 class="text-2xl font-bold mb-6">YOUR ORDER</h2>
+        <div id="order-list" class="space-y-3"></div>
+        <div class="mt-8 border-t pt-4 text-xl font-bold flex justify-between">
+            <span>Total:</span>
+            <span id="total-price">$0.00</span>
+        </div>
+        <button onclick="pay()" class="w-full bg-green-600 py-4 rounded-xl mt-6 font-bold">PAY</button>
+        <button onclick="hideOrder()" class="w-full bg-gray-700 py-3 rounded-xl mt-2">Back</button>
+    </div>
+
     <script>
+        const menuItems = [
+            {name: "Cake", price: 1.00}, {name: "Burger", price: 4.99}, {name: "Fries", price: 1.49},
+            {name: "Hotdog", price: 3.49}, {name: "Taco", price: 3.99}, {name: "Pizza", price: 7.99},
+            {name: "Donut", price: 1.49}, {name: "Popcorn", price: 1.99}, {name: "Coke", price: 1.49},
+            {name: "Icecream", price: 5.99}, {name: "Cookie", price: 3.99}, {name: "Flan", price: 7.99}
+        ];
+
+        let cart = {};
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        let cart = {};
-
-        function changeCount(name, price, delta) {
-            if (!cart[name]) cart[name] = { count: 0, price: price };
-            cart[name].count += delta;
+        function renderMenu() {
+            const menuDiv = document.getElementById('menu');
+            menuDiv.innerHTML = menuItems.map(item => `
+                <div class="bg-gray-800 p-4 rounded-xl flex justify-between items-center shadow-lg">
+                    <div class="font-semibold">${item.name} <span class="text-orange-400 block">$${item.price}</span></div>
+                    <div id="btn-${item.name}">
+                        ${!cart[item.name] ? 
+                            `<button onclick="add('${item.name}', ${item.price})" class="bg-orange-500 px-6 py-2 rounded-lg font-bold">ADD</button>` :
+                            `<div class="flex items-center gap-3 bg-gray-700 px-2 py-1 rounded-lg">
+                                <button onclick="update('${item.name}', -1)" class="text-red-400 font-bold px-2">-</button>
+                                <span class="font-bold w-6 text-center">${cart[item.name].count}</span>
+                                <button onclick="update('${item.name}', 1)" class="text-green-400 font-bold px-2">+</button>
+                            </div>`
+                        }
+                    </div>
+                </div>
+            `).join('');
             
-            if (cart[name].count <= 0) delete cart[name];
-            
-            document.getElementById(`count-${name}`).innerText = cart[name] ? cart[name].count : 0;
-            updateButton();
+            const total = Object.values(cart).reduce((s, i) => s + i.count, 0);
+            const btn = document.getElementById('view-order');
+            btn.classList.toggle('hidden', total === 0);
+            btn.innerText = `VIEW ORDER (${total})`;
         }
 
-        function updateButton() {
-            let totalItems = Object.values(cart).reduce((sum, item) => sum + item.count, 0);
-            let btn = document.getElementById('view-order');
-            if (totalItems > 0) {
-                btn.classList.remove('hidden');
-                btn.innerText = "VIEW ORDER (" + totalItems + ")";
-            } else {
-                btn.classList.add('hidden');
-            }
+        function add(name, price) { cart[name] = {count: 1, price: price}; renderMenu(); }
+        function update(name, delta) { 
+            cart[name].count += delta; 
+            if (cart[name].count <= 0) delete cart[name]; 
+            renderMenu(); 
         }
 
-        function checkout() {
-            let orderData = Object.keys(cart).map(name => ({
-                name: name,
-                price: cart[name].price * cart[name].count,
-                count: cart[name].count
-            }));
-            
-            tg.sendData(JSON.stringify(orderData));
-            tg.close();
+        function showOrder() {
+            document.getElementById('menu-container').classList.add('hidden');
+            document.getElementById('order-screen').classList.remove('hidden');
+            let total = 0;
+            const list = document.getElementById('order-list');
+            list.innerHTML = Object.entries(cart).map(([name, item]) => {
+                total += item.price * item.count;
+                return `<div class="flex justify-between"><span>${name} x${item.count}</span><span>$${(item.price * item.count).toFixed(2)}</span></div>`;
+            }).join('');
+            document.getElementById('total-price').innerText = `$${total.toFixed(2)}`;
         }
+
+        function hideOrder() {
+            document.getElementById('menu-container').classList.remove('hidden');
+            document.getElementById('order-screen').classList.add('hidden');
+        }
+
+        function pay() { tg.sendData(JSON.stringify(cart)); tg.close(); }
+
+        renderMenu();
     </script>
 </body>
 </html>
